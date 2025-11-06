@@ -1,0 +1,349 @@
+---
+title: "Your Title"
+subtitle: "BMIN5030 Final Project"
+author: "FirstName LastName"
+format: html
+editor: visual
+number-sections: true
+embed-resources: true
+---
+
+------------------------------------------------------------------------
+
+Use this template to complete your project throughout the course. Your Final Project presentation will be based on the contents of this document. Replace the title/name above and text below with your own, but keep the headers. Feel free to change the theme and other display settings, although this is not required.
+
+## Overview {#sec-overview}
+
+Give a brief a description of your project and its goal(s), what data you are using to complete it, and what two faculty/staff in different fields you have spoken to about your project with a brief summary of what you learned from each person. Include a link to your final project GitHub repository.
+
+My research question is "Does breast density change the link between age and late-stage diagnosis in cancers found within 1 year of screening?."I will use the Mammography Screening Dataset from the Breast Cancer Surveillance Consortium (BCSC). This dataset includes over 2.5 million screening mammograms from U.S. women aged 40–74, collected between 2005 and 2017. After meeting with Dr. Anne McCarthy, she recommended going from 2 to 4 breast cancer categories (dense \[c + d\] vs not dense \[a + b\]) because the groups are too small. She also recommended separating the age groups into young (40-49) vs old (50+) instead of using all of the 4 age categories.
+
+## Introduction {#sec-introduction}
+
+Breast cancer is one of the most common cancers among women in the United States, and catching it early can make a big difference in treatment and survival. Screening mammograms help find cancers sooner, but some women are still diagnosed at a later stage even when they’ve been screened.
+
+This project looks at whether breast density changes the link between age and late-stage breast cancer in cancers found within one year of screening. Dense breast tissue can make it harder for mammograms to detect tumors, and younger women are more likely to have dense breasts. Together, these factors might affect how early or late a cancer is found.
+
+I’m using data from the Breast Cancer Surveillance Consortium (BCSC), which includes more than 2.5 million mammograms from U.S. women ages 40–74 between 2005 and 2017. After meeting with Dr. Anne McCarthy, I simplified the analysis to compare two age groups (40–49 vs. 50 and older) and two density groups (dense vs. not dense) so the results would be easier to interpret and based on larger sample sizes.
+
+This question sits at the intersection of public health, data science, and radiology. By combining clinical knowledge with data analysis, the goal is to better understand which groups of women might be more likely to have a cancer missed or detected later during screening.
+
+**Predictors of Interest**:
+
+agegrp – age group at time of mammogram
+
+density_c – Breast density based on BI-RADS categories
+
+examyear_cat – year mammogram was done
+
+riskBCSC_v2_5y_cat – estimated 5-year risk of getting breast cancer
+
+resinit_c – initial screening result (positive or negative)
+
+resfnl_c – final screening result: positive (BI-RADS 4 or 5)
+
+resfnl_c3 – final screeening result: positive (BI-RADS 3, 4 or 5)
+
+cancscrfu1yr_c – diagnosed with any type of breast cancer within a year
+
+dcisscrfu1yr_c – Whether non-invasive breast cancer diagnosed within a year
+
+invscrfu1yr_c – Whether invasive breast cancer was diagnosed within a year
+
+**Outcome of Interest**:
+
+stage_advanced - Advanced breast cancer at diagnosis
+
+## Methods {#sec-methods}
+
+Describe the data used and general methodological approach used to address the problem described in the @sec-introduction. Subsequently, incorporate full R code necessary to retrieve and clean data, and perform analysis. Be sure to include a description of code so that others (including your future self) can understand what you are doing and why.
+
+To evaluate whether breast density modifies the relationship between age and late-stage diagnosis, I used a **logistic regression** and **random forest** model to compare linear and nonlinear approaches. The dataset was divided into training and testing subsets using a stratified split to maintain the proportion of early- and late-stage cases. Model performance was tested using 10-fold cross-validation.
+
+Because late-stage diagnoses were relatively rare, I used three approaches to address class imbalance:
+
+**Unweighted (baseline)**: Using the data as it is 
+
+**Downsampling**: The majority (early-stage) class is reduced during training to balance the dataset; and
+
+**Class weighting**: A higher importance is assigned to the minority (late-stage) cases in the logistic regression model.
+
+The performance metrics area under the ROC curve (AUC) and sensitivity were compared across models and imbalance-handling strategies.
+
+## Results {#sec-results}
+
+```{r}
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(tidymodels)
+library(naniar)     
+library(vip)        
+library(ggplot2)
+library(gt)
+theme_set(theme_minimal())
+set.seed(2025)
+```
+
+
+```{r}
+library(tidyverse)
+mammography <- read_csv("/Users/linabel/Desktop/dsst389/data/bcsc_mammo_performance.csv")
+```
+
+# Exploratory Analysis
+
+```{r}
+library(ggplot2)
+
+mammography |> 
+  ggplot(aes(x = agegrp)) + 
+  geom_bar(fill = "lightblue", color = "black") + 
+  labs(
+    title = "Age Distribution", 
+    x = "Age Group", 
+    y = "Count"
+  ) + 
+  theme_minimal()
+```
+
+Most breast cancer cases fall within the 50–69 age range. Fewer cases are seen in the 40–49 and 70–74 groups.
+
+```{r}
+mammography |> 
+  ggplot(aes(x = density_c)) + 
+  geom_bar(fill = "lightblue", color = "black") + 
+  labs(
+    title = "Breast Density Distribution", 
+    x = "Breast Density Category", 
+    y = "Count"
+  ) + 
+  theme_minimal()
+```
+
+The most common breast density types are scattered fibroglandular densities (b) and heterogeneously dense (c), while almost entirely fatty (a) and extremely dense (d) breasts are less frequent. This distribution suggests that most individuals in the dataset have moderate breast density, which is consistent with typical screening populations.
+
+```{r}
+mammography |> 
+  ggplot(aes(x = riskBCSC_v2_5y_cat)) +
+  geom_bar(fill = "lightblue", color = "black") +
+  labs(
+    title = "5-Year Risk Category by Cancer Stage",
+    x = "5-Year Breast Cancer Risk Category",
+    y = "Count",
+    fill = "Advanced Stage"
+  ) +
+  theme_minimal()
+```
+
+Most breast cancer cases fall into the 1.00 to 1.66 and 0.00 to \<1.00 five-year risk categories, with fewer cases in the higher-risk ranges (≥2.5) or marked as unknown. Many diagnosed cases had relatively low or moderate risk scores
+
+```{r}
+mammography |> 
+  ggplot(aes(x = examyear_cat)) + 
+  geom_bar(fill = "lightblue", color = "black") + 
+  labs(
+    title = "Distribution of Exam Year Categories", 
+    x = "Exam Year Category", 
+    y = "Count"
+  ) + 
+  theme_minimal()
+```
+
+Most exams in the dataset occurred between 2009 and 2014, with peaks in the 2009–2012 categories. The number of exams dropped in the most recent period (2015–2017), which could affect the number of recent-stage diagnoses or follow-up data available.
+
+```{r}
+mammography |> 
+  count(stage_advanced) |> 
+  mutate(proportion = n / sum(n))
+```
+
+highly imbalanced classes
+
+```{r}
+mammography%>%
+  filter(invscrfu1yr_c == 1) %>%
+  count(agegrp, density_c, stage_advanced) %>%
+  group_by(agegrp, density_c) %>%
+  mutate(prop = n / sum(n))
+
+```
+
+# Cohort Definition & Variable Recoding
+
+```{r}
+library(dplyr)
+library(stringr)
+library(tidyr)   # for drop_na
+library(gt)
+
+# -- Expand + recode first (if your data still has string 0/1 and a 'count' column)
+mammography <- mammography |>
+  mutate(
+    resinit_c        = str_extract(resinit_c, "^[01]"),
+    resfnl_c         = str_extract(resfnl_c, "^[01]"),
+    resfnl_c3        = str_extract(resfnl_c3, "^[01]"),
+    cancscrfu1yr_c   = str_extract(cancscrfu1yr_c, "^[01]"),
+    dcisscrfu1yr_c   = str_extract(dcisscrfu1yr_c, "^[01]"),
+    invscrfu1yr_c    = str_extract(invscrfu1yr_c, "^[01]"),
+    stage_advanced   = str_extract(stage_advanced, "^[01]")
+  ) |>
+  uncount(weights = count)
+
+# -- Cohort definition & recodes (fixed parentheses + dplyr::select)
+mmg <- mammography %>%
+  mutate(
+    age_group2 = ifelse(grepl("40", agegrp), "young", "older"),
+    density_binary = case_when(
+      density_c %in% c("a","b") ~ "not_dense",
+      density_c %in% c("c","d") ~ "dense",
+      TRUE ~ NA_character_
+    ),
+    stage_advanced = factor(stage_advanced, levels = c("0","1"),
+                            labels = c("early","late"))
+  ) %>%
+  dplyr::select(stage_advanced, age_group2, density_binary, dplyr::everything())
+
+mmg <- mmg %>%
+  mutate(
+    density_c = tolower(trimws(density_c)),
+    riskBCSC_v2_5y_cat = tolower(trimws(riskBCSC_v2_5y_cat))
+  ) %>%
+  mutate(
+    density_c = na_if(density_c, "unknown"),
+    riskBCSC_v2_5y_cat = na_if(riskBCSC_v2_5y_cat, "unknown"),
+    density_c = ifelse(density_c %in% c("", "na", "n/a"), NA, density_c),
+    riskBCSC_v2_5y_cat = ifelse(riskBCSC_v2_5y_cat %in% c("", "na", "n/a"), NA, riskBCSC_v2_5y_cat)
+  )
+
+# -- Drop rows missing key vars (use tidyr::drop_na)
+mmg_clean <- mmg %>% 
+  tidyr::drop_na(stage_advanced, age_group2, density_binary) %>% 
+  filter(cancscrfu1yr_c == 1) 
+
+# -- Quick check table
+mmg_clean %>%
+ count(stage_advanced) %>%
+  mutate(prop = n/sum(n)) %>%
+  gt() %>%
+  tab_header(title = "Stage distribution among cancers within 1 year")
+
+```
+
+Among women diagnosed with breast cancer within one year of screening,  9% (n = 1,025) presented with a late-stage (advanced) diagnosis, while the majority, about 91% (n = 9,958) — were diagnosed at an early stage.
+
+This distribution suggests that most cancers detected within one year of screening are found at earlier stages. The smaller proportion of late-stage diagnoses may reflect differences in tumor biology, screening sensitivity, or individual-level factors like age and breast density, which will be examined in later analyses.
+
+## Missingness Summary
+
+```{r}
+library(naniar)
+library(dplyr)
+library(gt)
+
+# make sure we're working with a plain tibble
+mmg_tbl <- dplyr::as_tibble(mmg)
+
+miss_tbl <- naniar::miss_var_summary(mmg_tbl) %>%
+  dplyr::arrange(dplyr::desc(pct_miss))
+
+miss_tbl %>%
+  dplyr::slice(1:min(20, n())) %>%
+  gt::gt() %>%
+  gt::tab_header(title = "Top variables by missingness")
+
+```
+
+Missingness in breast density (density_c), BCSC 5-year risk estimates (riskBCSC_v2_5y_cat),  happened in the same 7.7% of mammograms, reflecting exams without enough data for risk estimation or density classification. The derived variable density_binary shared this same missing pattern.
+
+```{r}
+
+mmg %>%
+  group_by(agegrp) %>%
+  summarise(
+    n = n(),
+    n_missing_density = sum(is.na(density_c)),
+    prop_missing_density = n_missing_density / n
+  ) %>%
+  gt() %>%
+  tab_header(title = "Missing breast density by age group")
+
+```
+
+Missingness in breast density was relatively low across all age groups, ranging from 6.2% to 8.6%. The proportion of missing density values was slightly higher among younger women aged 40–49 (8.6%), compared with 50–59 (7.9%), 60–69 (7.1%), and 70–74 (6.2%).This suggests that missing density information is modest and does not appear to differ significantly by age group.
+
+
+
+# Exploratory Plots
+
+```{r}
+mmg_clean %>%
+  ggplot(aes(x = age_group2, fill = stage_advanced)) +
+  geom_bar(position = "fill") +
+  labs(y = "Proportion", x = "Age group", title = "Late-stage proportion by age group")
+```
+
+There is a slightly higher proportion of young (40-49) individuals who are diagnosed with late stage diagnosis within one year compared to older individuals.
+
+```{r}
+mmg_clean %>%
+  ggplot(aes(x = density_binary, fill = stage_advanced)) +
+  geom_bar(position = "fill") +
+  labs(y = "Proportion", x = "Breast density", title = "Late-stage proportion by density")
+```
+
+There is a slightly higher proportion of individuals with dense breasts that are diagnosed with late stage breast cancer compared to individuals with not dense breasts.
+
+```{r}
+mmg_clean %>%
+  ggplot(aes(x = age_group2, fill = density_binary)) +
+  geom_bar(position = "fill") +
+  labs(y = "Proportion", x = "Age group", title = "Distribution of density by age group")
+```
+
+A higher proportion of younger individuals have dense breasts compared to older individuals.
+
+## Train/Test Split (Stratified)
+
+```{r}
+set.seed(123)
+split <- initial_split(mmg_clean, prop = 0.8, strata = stage_advanced)
+train <- training(split)
+test  <- testing(split)
+
+train %>% count(stage_advanced) %>% mutate(prop = n/sum(n)) %>% gt() %>%
+  tab_header(title = "Train set outcome distribution")
+```
+
+## Recipe
+
+```{r}
+base_recipe <- recipe(
+  stage_advanced ~ age_group2 + density_binary +
+    examyear_cat + riskBCSC_v2_5y_cat +
+    resinit_c + resfnl_c + resfnl_c3,
+  data = train ) %>%
+  step_interact(~ age_group2:density_binary) %>%
+  step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
+  step_zv(all_predictors())
+
+```
+
+## Models
+
+```{r}
+# Logistic regression 
+lr_spec <- logistic_reg(penalty = 0.1, mixture = 0) %>%
+  set_engine("glmnet") %>%
+  set_mode("classification")
+
+# Random forest
+rf_spec <- rand_forest(trees = 500, min_n = 10) %>%
+  set_engine("randomForest", importance = TRUE) %>%
+  set_mode("classification")
+```
+
+## Conclusion
+
+This the conclusion. The @sec-results can be invoked here.
