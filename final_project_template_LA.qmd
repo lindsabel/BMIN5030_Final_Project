@@ -1,7 +1,7 @@
 ---
-title: "Your Title"
+title: "Age, Density, and Late-Stage Breast Cancer"
 subtitle: "BMIN5030 Final Project"
-author: "FirstName LastName"
+author: "Lindsey Abellard"
 format: html
 editor: visual
 number-sections: true
@@ -10,49 +10,53 @@ embed-resources: true
 
 ------------------------------------------------------------------------
 
-Use this template to complete your project throughout the course. Your Final Project presentation will be based on the contents of this document. Replace the title/name above and text below with your own, but keep the headers. Feel free to change the theme and other display settings, although this is not required.
-
 ## Overview {#sec-overview}
 
-Give a brief a description of your project and its goal(s), what data you are using to complete it, and what two faculty/staff in different fields you have spoken to about your project with a brief summary of what you learned from each person. Include a link to your final project GitHub repository.
+My research question is: *“Does breast density change the link between age and late-stage diagnosis in cancers found within one year of screening?”* I use the [**Mammography Screening Dataset**](https://www.bcsc-research.org/index.php/datasets/mammo-screen-data) from the **Breast Cancer Surveillance Consortium (BCSC)**, which includes over 2.5 million screening mammograms from U.S. women aged 40–74, collected between 2005 and 2017.
 
-My research question is "Does breast density change the link between age and late-stage diagnosis in cancers found within 1 year of screening?."I will use the Mammography Screening Dataset from the Breast Cancer Surveillance Consortium (BCSC). This dataset includes over 2.5 million screening mammograms from U.S. women aged 40–74, collected between 2005 and 2017. After meeting with Dr. Anne McCarthy, she recommended going from 2 to 4 breast cancer categories (dense \[c + d\] vs not dense \[a + b\]) because the groups are too small. She also recommended separating the age groups into young (40-49) vs old (50+) instead of using all of the 4 age categories.
+After meeting with Dr. Anne McCarthy, I learned that some breast density and age subgroups were too small for meaningful analysis, so I simplified the model to compare two density categories (dense \[c + d\] vs. not dense \[a + b\]) and two age categories (40–49 vs. 50+). These refinements made the analysis more interpretable and statistically robust.
+
+This project integrates public health, data science, and radiology to examine how imaging characteristics and patient demographics influence cancer detection. By combining clinical insight with quantitative analysis, the goal is to identify which groups of women may be at greater risk for late-stage diagnosis despite recent screening
 
 ## Introduction {#sec-introduction}
 
-Breast cancer is one of the most common cancers among women in the United States, and catching it early can make a big difference in treatment and survival. Screening mammograms help find cancers sooner, but some women are still diagnosed at a later stage even when they’ve been screened.
+Breast cancer is one of the most common cancers among women in the United States, and early detection is critical for improving treatment options and survival. Mammography plays a key role in finding cancers sooner, yet some women are still diagnosed at a later stage even after being screened.
 
-This project looks at whether breast density changes the link between age and late-stage breast cancer in cancers found within one year of screening. Dense breast tissue can make it harder for mammograms to detect tumors, and younger women are more likely to have dense breasts. Together, these factors might affect how early or late a cancer is found.
+One factor that may contribute to this is breast density. Dense tissue can obscure tumors on mammograms, reducing the likelihood of early detection. Younger women are also more likely to have dense breasts, suggesting that age and density together may influence how early or late a cancer is identified.
 
-I’m using data from the Breast Cancer Surveillance Consortium (BCSC), which includes more than 2.5 million mammograms from U.S. women ages 40–74 between 2005 and 2017. After meeting with Dr. Anne McCarthy, I simplified the analysis to compare two age groups (40–49 vs. 50 and older) and two density groups (dense vs. not dense) so the results would be easier to interpret and based on larger sample sizes.
+This project explores how these two factors interact by examining whether breast density modifies the relationship between age and late-stage breast cancer in cancers diagnosed within one year of screening. Understanding this interaction can help identify groups who may be at greater risk for cancers being missed or detected later despite routine screening.
 
-This question sits at the intersection of public health, data science, and radiology. By combining clinical knowledge with data analysis, the goal is to better understand which groups of women might be more likely to have a cancer missed or detected later during screening.
+### **Data and Variables**
 
-**Predictors of Interest**:
+**Primary predictors**
 
-agegrp – age group at time of mammogram
+-   **age_group2** – Age group at screening (40–49 vs. 50+).
 
-density_c – Breast density based on BI-RADS categories
+-   **density_binary** – Breast density (dense vs. not dense).
 
-examyear_cat – year mammogram was done
+**Covariates / Adjustment variables**
 
-riskBCSC_v2_5y_cat – estimated 5-year risk of getting breast cancer
+-   **examyear_cat** – Exam year category.
 
-resinit_c – initial screening result (positive or negative)
+-   **riskBCSC_v2_5y_cat** – BCSC 5-year breast cancer risk category.
 
-resfnl_c – final screening result: positive (BI-RADS 4 or 5)
+-   **resinit_c** – Initial screening result (positive vs. negative).
 
-resfnl_c3 – final screeening result: positive (BI-RADS 3, 4 or 5)
+-   **resfnl_c** – Final BI-RADS 4–5 assessment.
 
-cancscrfu1yr_c – diagnosed with any type of breast cancer within a year
+**resfnl_c3** – Final BI-RADS 3–5 assessment.
 
-dcisscrfu1yr_c – Whether non-invasive breast cancer diagnosed within a year
+**Cohort Definition Variables (not used as predictors)** Used only to restrict the dataset to cancers diagnosed within 1 year of screening:
 
-invscrfu1yr_c – Whether invasive breast cancer was diagnosed within a year
+-   **cancscrfu1yr_c** – Any breast cancer within 1 year (required to be 1).
 
-**Outcome of Interest**:
+-   **invscrfu1yr_c** – Used to confirm invasive cancers.
 
-stage_advanced - Advanced breast cancer at diagnosis
+-   **dcisscrfu1yr_c** – Used to confirm DCIS cases.
+
+**Outcome**
+
+-   **stage_advanced** – Advanced-stage breast cancer at diagnosis.
 
 ## Methods {#sec-methods}
 
@@ -62,7 +66,7 @@ To evaluate whether breast density modifies the relationship between age and lat
 
 Because late-stage diagnoses were relatively rare, I used three approaches to address class imbalance:
 
-**Unweighted (baseline)**: Using the data as it is 
+**Unweighted (baseline)**: Using the data as it is
 
 **Downsampling**: The majority (early-stage) class is reduced during training to balance the dataset; and
 
@@ -70,7 +74,79 @@ Because late-stage diagnoses were relatively rare, I used three approaches to ad
 
 The performance metrics area under the ROC curve (AUC) and sensitivity were compared across models and imbalance-handling strategies.
 
-## Results {#sec-results}
+```{r}
+install.packages("themis")
+install.packages("ranger")
+```
+
+# Cohort Definition & Variable Recoding
+
+```{r}
+library(dplyr)
+library(stringr)
+library(tidyr)   # for drop_na
+library(gt)
+
+# str_extract extracts the first character (0 or 1) and keeps only the numeric code 
+# In the dataset each row represented multiple mammograms so uncount() expands the dataset so each mammogram becomes one row based on the count column
+mammography <- mammography |>
+  mutate(
+    resinit_c        = str_extract(resinit_c, "^[01]"),
+    resfnl_c         = str_extract(resfnl_c, "^[01]"),
+    resfnl_c3        = str_extract(resfnl_c3, "^[01]"),
+    cancscrfu1yr_c   = str_extract(cancscrfu1yr_c, "^[01]"),
+    dcisscrfu1yr_c   = str_extract(dcisscrfu1yr_c, "^[01]"),
+    invscrfu1yr_c    = str_extract(invscrfu1yr_c, "^[01]"),
+    stage_advanced   = str_extract(stage_advanced, "^[01]")
+  ) |>
+  uncount(weights = count)
+
+# Create new binary predictors (age_group2, density_binary,stage_advanced) and reorder columns 
+mmg <- mammography %>%
+  mutate(
+    age_group2 = ifelse(grepl("40", agegrp), "young", "older"),
+    density_binary = case_when(
+      density_c %in% c("a","b") ~ "not_dense",
+      density_c %in% c("c","d") ~ "dense",
+      TRUE ~ NA_character_
+    ),
+    stage_advanced = factor(stage_advanced, levels = c("0","1"),
+                            labels = c("early","late"))
+  ) %>%
+  dplyr::select(stage_advanced, age_group2, density_binary, dplyr::everything())
+
+# Clean up text variables and fix unknown categories 
+mmg <- mmg %>%
+  mutate(
+    density_c = tolower(trimws(density_c)),
+    riskBCSC_v2_5y_cat = tolower(trimws(riskBCSC_v2_5y_cat))
+  ) %>%
+  mutate(
+    density_c = na_if(density_c, "unknown"),
+    riskBCSC_v2_5y_cat = na_if(riskBCSC_v2_5y_cat, "unknown"),
+    density_c = ifelse(density_c %in% c("", "na", "n/a"), NA, density_c),
+    riskBCSC_v2_5y_cat = ifelse(riskBCSC_v2_5y_cat %in% c("", "na", "n/a"), NA, riskBCSC_v2_5y_cat)
+  )
+
+# remove rows missing in modeling variables and filter data to only include cancers diagnosed within 1 year
+mmg_clean <- mmg %>% 
+  tidyr::drop_na(stage_advanced, age_group2, density_binary) %>% 
+  filter(cancscrfu1yr_c == 1) 
+
+# Summarize outcome distribution
+mmg_clean %>%
+ count(stage_advanced) %>%
+  mutate(prop = n/sum(n)) %>%
+  gt() %>%
+  tab_header(title = "Stage distribution among cancers within 1 year")
+
+```
+
+Among women diagnosed with breast cancer within one year of screening, 9% (n = 1,025) presented with a late-stage (advanced) diagnosis, while the majority, about 91% (n = 9,958) — were diagnosed at an early stage.
+
+This distribution suggests that most cancers detected within one year of screening are found at earlier stages. The smaller proportion of late-stage diagnoses may reflect differences in tumor biology, screening sensitivity, or individual-level factors like age and breast density, which will be examined in later analyses.
+
+# Results {#sec-results}
 
 ```{r}
 #| message: false
@@ -82,10 +158,11 @@ library(naniar)
 library(vip)        
 library(ggplot2)
 library(gt)
+library(themis)
+library(ranger)
 theme_set(theme_minimal())
 set.seed(2025)
 ```
-
 
 ```{r}
 library(tidyverse)
@@ -159,7 +236,7 @@ mammography |>
   mutate(proportion = n / sum(n))
 ```
 
-highly imbalanced classes
+The classes are highly imbalanced. A model that already predicts "early stage" would already get overall high accuracy, even while missing most advanced cases. Down sampling might be needed to help the model better identify minority (advance-stage) cases.
 
 ```{r}
 mammography%>%
@@ -170,70 +247,7 @@ mammography%>%
 
 ```
 
-# Cohort Definition & Variable Recoding
-
-```{r}
-library(dplyr)
-library(stringr)
-library(tidyr)   # for drop_na
-library(gt)
-
-# -- Expand + recode first (if your data still has string 0/1 and a 'count' column)
-mammography <- mammography |>
-  mutate(
-    resinit_c        = str_extract(resinit_c, "^[01]"),
-    resfnl_c         = str_extract(resfnl_c, "^[01]"),
-    resfnl_c3        = str_extract(resfnl_c3, "^[01]"),
-    cancscrfu1yr_c   = str_extract(cancscrfu1yr_c, "^[01]"),
-    dcisscrfu1yr_c   = str_extract(dcisscrfu1yr_c, "^[01]"),
-    invscrfu1yr_c    = str_extract(invscrfu1yr_c, "^[01]"),
-    stage_advanced   = str_extract(stage_advanced, "^[01]")
-  ) |>
-  uncount(weights = count)
-
-# -- Cohort definition & recodes (fixed parentheses + dplyr::select)
-mmg <- mammography %>%
-  mutate(
-    age_group2 = ifelse(grepl("40", agegrp), "young", "older"),
-    density_binary = case_when(
-      density_c %in% c("a","b") ~ "not_dense",
-      density_c %in% c("c","d") ~ "dense",
-      TRUE ~ NA_character_
-    ),
-    stage_advanced = factor(stage_advanced, levels = c("0","1"),
-                            labels = c("early","late"))
-  ) %>%
-  dplyr::select(stage_advanced, age_group2, density_binary, dplyr::everything())
-
-mmg <- mmg %>%
-  mutate(
-    density_c = tolower(trimws(density_c)),
-    riskBCSC_v2_5y_cat = tolower(trimws(riskBCSC_v2_5y_cat))
-  ) %>%
-  mutate(
-    density_c = na_if(density_c, "unknown"),
-    riskBCSC_v2_5y_cat = na_if(riskBCSC_v2_5y_cat, "unknown"),
-    density_c = ifelse(density_c %in% c("", "na", "n/a"), NA, density_c),
-    riskBCSC_v2_5y_cat = ifelse(riskBCSC_v2_5y_cat %in% c("", "na", "n/a"), NA, riskBCSC_v2_5y_cat)
-  )
-
-# -- Drop rows missing key vars (use tidyr::drop_na)
-mmg_clean <- mmg %>% 
-  tidyr::drop_na(stage_advanced, age_group2, density_binary) %>% 
-  filter(cancscrfu1yr_c == 1) 
-
-# -- Quick check table
-mmg_clean %>%
- count(stage_advanced) %>%
-  mutate(prop = n/sum(n)) %>%
-  gt() %>%
-  tab_header(title = "Stage distribution among cancers within 1 year")
-
-```
-
-Among women diagnosed with breast cancer within one year of screening,  9% (n = 1,025) presented with a late-stage (advanced) diagnosis, while the majority, about 91% (n = 9,958) — were diagnosed at an early stage.
-
-This distribution suggests that most cancers detected within one year of screening are found at earlier stages. The smaller proportion of late-stage diagnoses may reflect differences in tumor biology, screening sensitivity, or individual-level factors like age and breast density, which will be examined in later analyses.
+Many age–density combinations had very small numbers of late-stage cancers, making estimates unstable within those groups. Based on this sparsity, my advisor recommended collapsing categories. I grouped age into two categories (40–49 vs. 50+) and breast density into dense vs. not dense, so that each subgroup would have larger, more reliable sample sizes.
 
 ## Missingness Summary
 
@@ -242,12 +256,14 @@ library(naniar)
 library(dplyr)
 library(gt)
 
-# make sure we're working with a plain tibble
+# convert dataset into a plain tibble 
 mmg_tbl <- dplyr::as_tibble(mmg)
 
+# make summary table of missing values for each variables 
 miss_tbl <- naniar::miss_var_summary(mmg_tbl) %>%
   dplyr::arrange(dplyr::desc(pct_miss))
 
+# Display the top 20 variables with the most missingness 
 miss_tbl %>%
   dplyr::slice(1:min(20, n())) %>%
   gt::gt() %>%
@@ -255,7 +271,7 @@ miss_tbl %>%
 
 ```
 
-Missingness in breast density (density_c), BCSC 5-year risk estimates (riskBCSC_v2_5y_cat),  happened in the same 7.7% of mammograms, reflecting exams without enough data for risk estimation or density classification. The derived variable density_binary shared this same missing pattern.
+Missingness in breast density (density_c), BCSC 5-year risk estimates (riskBCSC_v2_5y_cat), happened in the same 7.7% of mammograms, reflecting exams without enough data for risk estimation or density classification. The derived variable density_binary shared this same missing pattern.
 
 ```{r}
 
@@ -271,11 +287,9 @@ mmg %>%
 
 ```
 
-Missingness in breast density was relatively low across all age groups, ranging from 6.2% to 8.6%. The proportion of missing density values was slightly higher among younger women aged 40–49 (8.6%), compared with 50–59 (7.9%), 60–69 (7.1%), and 70–74 (6.2%).This suggests that missing density information is modest and does not appear to differ significantly by age group.
+Missingness in breast density was relatively low across all age groups, ranging from 6.2% to 8.6%. The proportion of missing density values was slightly higher among younger women aged 40–49 (8.6%), compared with 50–59 (7.9%), 60–69 (7.1%), and 70–74 (6.2%). This suggests that missing density information is modest and does not appear to differ significantly by age group.
 
-
-
-# Exploratory Plots
+# Descriptive Analysis
 
 ```{r}
 mmg_clean %>%
@@ -307,6 +321,7 @@ A higher proportion of younger individuals have dense breasts compared to older 
 ## Train/Test Split (Stratified)
 
 ```{r}
+# The data is split into 80% training and 20% testing, stratified on stage_advanced so the imbalance between early and late is preserved in both sets 
 set.seed(123)
 split <- initial_split(mmg_clean, prop = 0.8, strata = stage_advanced)
 train <- training(split)
@@ -319,14 +334,15 @@ train %>% count(stage_advanced) %>% mutate(prop = n/sum(n)) %>% gt() %>%
 ## Recipe
 
 ```{r}
+# The model formula is defined using predictors of interest
 base_recipe <- recipe(
   stage_advanced ~ age_group2 + density_binary +
     examyear_cat + riskBCSC_v2_5y_cat +
     resinit_c + resfnl_c + resfnl_c3,
   data = train ) %>%
-  step_interact(~ age_group2:density_binary) %>%
-  step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
-  step_zv(all_predictors())
+  step_interact(~ age_group2:density_binary) %>% # an interaction term between age group and density is added 
+  step_dummy(all_nominal_predictors(), one_hot = TRUE) %>% # converts categorical predictors to dummy variables 
+  step_zv(all_predictors()) # removes predictors with zero variance 
 
 ```
 
@@ -334,15 +350,165 @@ base_recipe <- recipe(
 
 ```{r}
 # Logistic regression 
+
+# Penalty controls how strongly the model shrinks coefficients, 0.1 is small enough to reduce overfitting without making the model so weak that it erases real association. 
+# Pure ridge regression (mixture =0) is used because it shrinks coefficients but doesn't remove variables (need to retain full model). Multicolinearity (ex. age & year of exam/ breast density) is handled by spreading penalty across correlated variables 
 lr_spec <- logistic_reg(penalty = 0.1, mixture = 0) %>%
   set_engine("glmnet") %>%
   set_mode("classification")
 
 # Random forest
+
+# 500 trees is enough to stabilize trees, adding more would not imporve performance significantly 
+# the minimum observations in a leaf is 10 because if leaves get too small (<5), the model memorizes noise leading to overfitting, this will improve generalization 
 rf_spec <- rand_forest(trees = 500, min_n = 10) %>%
   set_engine("randomForest", importance = TRUE) %>%
   set_mode("classification")
 ```
+
+The logistic regression model will try hard to explain the few late stage cases and may overreact to small quirks, leading to unstable coefficient estimates. Regularization well help to tame this.
+
+## Workflows
+
+```{r}
+lr_wf <- workflow() %>% add_model(lr_spec) %>% add_recipe(base_recipe)
+rf_wf <- workflow() %>% add_model(rf_spec) %>% add_recipe(base_recipe)
+```
+
+## 10-fold Cross-Validation (Stratified)
+
+```{r}
+set.seed(123)
+folds <- vfold_cv(train, v = 10, strata = stage_advanced)
+
+ctrl <- control_resamples(save_pred = TRUE)
+
+lr_cv <- fit_resamples(lr_wf, folds, control = ctrl)
+rf_cv <- fit_resamples(rf_wf, folds, control = ctrl)
+
+collect_metrics(lr_cv) %>% filter(.metric %in% c("roc_auc","accuracy")) %>% gt()
+collect_metrics(rf_cv) %>% filter(.metric %in% c("roc_auc","accuracy")) %>% gt()
+```
+
+## Model Cross-Validation Performance
+
+During 10-fold cross-validation, the logistic regression model produced an average accuracy of 0.91 and AUC of 0.66, while the random forest model reached a similar accuracy (0.91) but a lower AUC (0.56). The accuracy is high because most observations belong to the early-stage (majority) class, meaning the models correctly classify many of these but miss many late-stage cases. The AUC assessed how well the model separates early vs. late stage. The logistic regression shows moderate discrimination (AUC ≈ 0.65), while the random forest performs only slightly better than random (AUC ≈ 0.56).Both models fit the dominant class well, but logistic regression generalizes better for identifying late-stage cancers. This suggests that tuning (e.g., downsampling) should be used to improve discrimination.
+
+## ROC Curves (CV)
+
+```{r}
+lr_cv_preds <- collect_predictions(lr_cv)
+rf_cv_preds <- collect_predictions(rf_cv)
+
+roc_data <- bind_rows(
+  roc_curve(lr_cv_preds, stage_advanced, .pred_late, event_level = "second") %>% 
+    mutate(model = "LR (10-fold CV)"),
+  roc_curve(rf_cv_preds, stage_advanced, .pred_late, event_level = "second") %>% 
+    mutate(model = "RF (10-fold CV)")
+)
+
+
+autoplot(roc_data) +
+  ggtitle("ROC Curves (CV): Logistic Regression vs Random Forest")
+```
+
+Because the dataset is highly imbalanced and no class weighting or tuned sampling has been applied yet, it’s unclear whether the modest AUCs reflect a genuinely weak association between predictors and stage or a failure to capture the relationship due to imbalance.
+
+## Fit on Training & Evaluate on Test
+
+```{r}
+lr_fit <- fit(lr_wf, train)
+rf_fit <- fit(rf_wf, train)
+
+lr_test_probs <- predict(lr_fit, test, type = "prob") %>% bind_cols(truth = test$stage_advanced)
+rf_test_probs <- predict(rf_fit, test, type = "prob") %>% bind_cols(truth = test$stage_advanced)
+
+lr_auc_test <- roc_auc(lr_test_probs, truth, .pred_late, event_level = "second")
+rf_auc_test <- roc_auc(rf_test_probs, truth, .pred_late, event_level = "second")
+
+bind_rows(
+  tibble(Model = "LR (Test)", AUC = lr_auc_test$.estimate),
+  tibble(Model = "RF (Test)", AUC = rf_auc_test$.estimate)
+) %>% gt() %>% tab_header(title = "Test set AUCs")
+```
+
+When evaluated on the held-out test set, logistic regression achieved an AUC of 0.65, while the random forest reached 0.57. This mirrors the cross-validation results: both models perform only modestly better than random, with logistic regression generalizing better than random forest. Given the strong class imbalance and lack of tuned weighting/sampling, these modest AUCs may reflect either a weak true association between predictors and stage or incomplete capture of the relationship.
+
+## Addressing Class Imbalance
+
+### A) Downsampling inside resampling
+
+```{r}
+rec_down <- base_recipe %>%
+  step_downsample(stage_advanced)
+
+lr_wf_down <- workflow() %>%
+  add_model(lr_spec) %>%
+  add_recipe(rec_down)
+
+rf_wf_down <- workflow() %>%
+  add_model(rf_spec) %>%
+  add_recipe(rec_down)
+
+lr_cv_down <- fit_resamples(lr_wf_down, folds, control = ctrl)
+rf_cv_down <- fit_resamples(rf_wf_down, folds, control = ctrl)
+
+bind_rows(
+  collect_metrics(lr_cv_down) %>%
+    filter(.metric == "roc_auc") %>%
+    mutate(Model = "LR (CV, downsample)"),
+  collect_metrics(rf_cv_down) %>%
+    filter(.metric == "roc_auc") %>%
+    mutate(Model = "RF (CV, downsample)")
+) %>%
+  dplyr::select(Model, mean, std_err) %>%
+  gt() %>%
+  tab_header(title = "AUC with downsampling (10-fold CV)")
+
+
+```
+
+After incorporating downsampling within resampling, both logistic regression and random forest achieved similar cross-validated AUCs (\~0.65), suggesting that addressing class imbalance improved model fairness toward late-stage cases. The comparable results indicate that both models are capturing a similar level of signal, though overall discrimination remains moderate.
+
+# Model Interpretation
+
+```{r}
+library(broom)
+library(gt)
+
+# Get tidy coefficient estimates from the fitted logistic regression model
+lr_coefs <- tidy(lr_fit) %>%
+  # drop intercept if you want
+  filter(term != "(Intercept)") %>%
+  # sort by effect size (absolute value)
+  arrange(desc(abs(estimate)))
+
+lr_coefs %>%
+  gt() %>%
+  tab_header(title = "Logistic regression coefficients (penalized glmnet)")
+
+```
+The penalized logistic regression model showed that screening assessment variables (initial and final BI-RADS results) were by far the strongest predictors of late-stage diagnosis, with the largest positive and negative coefficients. Breast density had a modest effect, with dense breasts associated with slightly higher odds of late-stage cancer, consistent with the masking effect, while age group had only small coefficients once density and screening results were included. The interaction between age and density was also minimal, suggesting little evidence that density meaningfully modifies the age–stage relationship in this dataset. Exam year and BCSC 5-year risk categories contributed very little to stage prediction. Overall, most predictive power came from the screening assessments themselves, with demographic and density features offering only weak additional discrimination.
+
+```{r}
+
+library(vip)
+library(gt)
+
+# Get variable importance from the fitted random forest model
+rf_imp <- vi(rf_fit) %>%          # vi() works directly on tidymodels workflows
+  arrange(desc(Importance))
+
+rf_imp %>%
+  gt() %>%
+  tab_header(title = "Random forest variable importance")
+
+vip(rf_fit, num_features = 10) +
+  ggtitle("Top 10 most important variables (Random forest)")
+
+
+```
+The random forest model identified the screening assessment variables as the most influential predictors of late-stage diagnosis, consistent with the logistic regression results. The initial screening result (resinit_c_X0/X1) and final BI-RADS categories (resfnl_c3_X0/X1) had the highest importance scores, indicating that features reflecting radiologist suspicion and tumor visibility play the dominant role in distinguishing early from late-stage cancers. Several BCSC 5-year risk categories also ranked relatively high, though their effects were still smaller than the screening assessments. Age group contributed modestly, with both “older” and “young” appearing within the top ten, while breast density had lower importance, suggesting a weaker role in predicting stage once other screening features are included. Exam year contributed very little. Overall, the random forest results reinforce the conclusion that screening-related variables, not demographic or density factors, carry most of the predictive signal for late-stage diagnosis in this dataset.
 
 ## Conclusion
 
