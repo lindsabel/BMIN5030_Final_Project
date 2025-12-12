@@ -7,9 +7,6 @@ This repository contains my final project for BMIN 5030. The analysis examines t
 - `final_project_template_LA.html` — Rendered HTML report output from the Quarto file.
 - `README.md` — Brief repository description and file guide.
 
-## How to run
-Render the report locally with:
-```bash
-quarto render final_project_template_LA.qmd
+
 
 
